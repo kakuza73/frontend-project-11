@@ -1,192 +1,177 @@
-/* eslint no-param-reassign: "error" */
+/* eslint-disable no-param-reassign  */
 
-import 'bootstrap/js/dist/modal.js';
-import { differenceWith, isEmpty, uniqueId } from 'lodash';
-import * as yup from 'yup';
-import i18next from 'i18next';
 import axios from 'axios';
-import processStates from './states.js';
+import i18next from 'i18next';
+import onChange from 'on-change';
+import { string, setLocale } from 'yup';
+import { differenceWith, uniqueId } from 'lodash';
+
+import render from './view.js';
+import parse from './parser.js';
 import resources from './locales/index.js';
-import watcher from './watcher.js';
-import parser from './parser.js';
 
-const validation = (url, uniqueUrl) => {
-  const scheme = yup
-    .string()
-    .trim()
-    .required()
-    .url()
-    .notOneOf(uniqueUrl);
-
-  return scheme.validate(url);
+const validate = (currentURL, previousURLs) => {
+  const schema = string().url().required().notOneOf(previousURLs);
+  return schema.validate(currentURL);
 };
 
-const getProxyUrl = (url) => {
-  const baseUrl = 'https://allorigins.hexlet.app/get';
+const updateFeeds = (state) => {
+  const promise = state.feeds.map(({ url, id }) => axios
+    .get(`https://allorigins.hexlet.app/get?disableCache=true&url=${url}`)
+    .then((response) => {
+      const currentPosts = state.posts.filter(({ feedId }) => feedId === id);
+      const loadedPosts = parse(response.data.contents).posts.map((post) => ({
+        ...post,
+        feedId: id,
+      }));
+      const newPosts = differenceWith(
+        loadedPosts,
+        currentPosts,
+        (loadedPost, currentPost) => loadedPost.title === currentPost.title,
+      ).map((post) => ({ ...post, id: uniqueId() }));
 
-  const proxyUrl = new URL(baseUrl);
-  proxyUrl.searchParams.set('disableCache', 'true');
-  proxyUrl.searchParams.set('url', url);
-
-  return proxyUrl.toString();
-};
-
-const loadUrlData = (url) => axios.get(getProxyUrl(url), { timeout: 5000 })
-  .then((res) => parser(res.data.contents));
-
-const normalizeFeed = (feed) => ({
-  ...feed,
-  id: uniqueId(),
-});
-
-const normalizePost = (posts, options = {}) => posts.map((post) => ({
-  ...post,
-  id: uniqueId(),
-  ...options,
-}));
-
-const postRss = (url, watchedState) => loadUrlData(url)
-  .then(({ title, description, items }) => {
-    const normalizedFeed = normalizeFeed({ title, description });
-    const normalizedPost = normalizePost(items, { feedId: normalizedFeed.id });
-
-    watchedState.processStateError = null;
-    watchedState.processState = processStates.finished;
-    watchedState.rssUrls = [url, ...watchedState.rssUrls];
-    watchedState.feeds = [normalizedFeed, ...watchedState.feeds];
-    watchedState.posts = [...normalizedPost, ...watchedState.posts];
-    watchedState.form.processState = processStates.finished;
-  }).catch((e) => {
-    if (e.isAxiosError) {
-      watchedState.processStateError = 'errors.app.network';
-    } else if (e.isParseError) {
-      watchedState.processStateError = 'errors.app.rssParser';
-    } else {
-      watchedState.processStateError = 'errors.app.unknown';
-      console.error(`Unknown error type: ${e.message}.`);
-    }
-
-    watchedState.processState = processStates.failed;
-    watchedState.form.processState = processStates.initial;
-  });
-
-const loadNewPosts = (watchedState) => {
-  const request = watchedState.rssUrls.map((url) => loadUrlData(url));
-  return Promise.all(request)
-    .then((responce) => responce.flatMap(({ items }, index) => {
-      const curFeed = watchedState.feeds[index];
-      return normalizePost(items, { feedId: curFeed.id });
+      state.posts.unshift(...newPosts);
     }));
+
+  Promise.all(promise).finally(() => {
+    setTimeout(() => updateFeeds(state), 5000);
+  });
 };
 
-const listenToNewPosts = (watchedState) => {
-  const timeoutMs = 5000;
+const errorState = (error, state) => {
+  switch (error.name) {
+    case 'ValidationError':
+      state.form = { ...state.form, valid: false, error: error.message };
 
-  loadNewPosts(watchedState)
-    .then((newPosts) => {
-      const newUPosts = differenceWith(
-        newPosts,
-        watchedState.posts,
-        (newPost, oldPost) => newPost.title === oldPost.title,
-      );
+      break;
 
-      if (isEmpty(newUPosts)) {
-        return;
-      }
+    case 'parserError':
+      state.loadingProcess.error = 'noRSS';
+      state.loadingProcess.status = 'failed';
 
-      watchedState.posts = [...newUPosts, ...watchedState.posts];
-    })
-    .finally(() => {
-      setTimeout(listenToNewPosts, timeoutMs, watchedState);
-    });
+      break;
+
+    case 'AxiosError':
+      state.loadingProcess.error = 'errNet';
+      state.loadingProcess.status = 'failed';
+
+      break;
+
+    default:
+      state.loadingProcess.error = 'unknown';
+      state.loadingProcess.status = 'failed';
+
+      break;
+  }
 };
 
 export default () => {
-  const defaultLanguage = 'ru';
-
-  const state = {
-    rssUrls: [],
+  const initialState = {
     feeds: [],
     posts: [],
-    processStateError: null,
-    processState: processStates.initial,
-    form: {
-      valid: true,
-      processStateError: null,
-      processState: processStates.initial,
+    loadingProcess: {
+      status: 'idle',
+      error: null,
     },
-    uiState: {
-      viewedPostsIds: new Set(),
-      previewPostId: null,
+    form: {
+      error: null,
+      valid: false,
+    },
+    modal: {
+      postId: null,
+    },
+    ui: {
+      seenPosts: new Set(),
     },
   };
 
   const elements = {
-    feedForm: {
-      form: document.querySelector('.rss-form'),
-      input: document.querySelector('[name="add-rss"]'),
-      submitButton: document.querySelector('button[type="submit"]'),
-    },
-    messageContainer: document.querySelector('.message-container'),
-
-    feedsContainer: document.querySelector('.feeds'),
-    postsContainer: document.querySelector('.posts'),
-
-
-    postPreviewModal: {
-      title: document.querySelector('#postPreviewModal .modal-title'),
-      body: document.querySelector('#postPreviewModal .modal-body'),
-      closeButton: document.querySelector('#postPreviewModal .modal-footer [data-bs-dismiss]'),
-      readMoreLink: document.querySelector('#postPreviewModal .modal-footer [data-readmore]'),
-    },
+    form: document.querySelector('.rss-form'),
+    feedback: document.querySelector('.feedback'),
+    input: document.getElementById('url-input'),
+    submitButton: document.querySelector('button[type="submit"]'),
+    rssFeeds: document.querySelector('.feeds'),
+    rssPosts: document.querySelector('.posts'),
+    modal: document.querySelector('#modal'),
   };
 
-  const i18nextInstance = i18next.createInstance();
+  const local = i18next.createInstance();
 
-  yup.setLocale(resources.yup);
+  local
+    .init({
+      lng: 'ru',
+      debug: false,
+      resources,
+    })
+    .then(() => {
+      setLocale({
+        string: {
+          url: 'notURL',
+        },
+        mixed: {
+          required: 'required',
+          notOneOf: 'exists',
+        },
+      });
 
-  return i18nextInstance.init({
-    lng: defaultLanguage,
-    resources: { ru: resources.ru },
-  }).then(() => {
-    const watchedState = watcher(state, elements, i18nextInstance);
+      const state = onChange(
+        initialState,
+        render(elements, initialState, local),
+      );
 
-    elements.postsContainer.addEventListener('click', (event) => {
-      const previewPostId = event.target.dataset.postId;
+      elements.form.addEventListener('submit', (event) => {
+        event.preventDefault();
 
-      if (!previewPostId) {
-        return;
-      }
+        const currentURL = new FormData(event.target).get('url');
+        const previousURLs = state.feeds.map(({ url }) => url);
 
-      event.preventDefault();
+        validate(currentURL, previousURLs)
+          .then(() => {
+            state.form = { ...state.form, valid: true, error: null };
+            state.loadingProcess.status = 'loading';
 
-      watchedState.uiState.previewPostId = previewPostId;
-      watchedState.uiState.viewedPostsIds = watchedState.uiState
-        .viewedPostsIds.add(previewPostId);
+            return axios.get(
+              `https://allorigins.hexlet.app/get?disableCache=true&url=${currentURL}`,
+            );
+          })
+          .then((response) => {
+            const { title, description, posts } = parse(response.data.contents);
+            const feed = {
+              id: uniqueId(),
+              url: currentURL,
+              title,
+              description,
+            };
+            const postsList = posts.map((post) => ({
+              ...post,
+              id: uniqueId(),
+              feedId: feed.id,
+            }));
+
+            state.feeds.unshift(feed);
+            state.posts.unshift(...postsList);
+
+
+            state.loadingProcess.error = null;
+            state.loadingProcess.status = 'success';
+          })
+          .catch((error) => {
+            errorState(error, state);
+          });
+      });
+
+      elements.rssPosts.addEventListener('click', ({ target }) => {
+        if (!('id' in target.dataset)) {
+          return;
+        }
+
+        const { id } = target.dataset;
+
+        state.modal.postId = id;
+
+        state.ui.seenPosts.add(id);
+      });
+
+      setTimeout(() => updateFeeds(state), 5000);
     });
-
-    elements.feedForm.form.addEventListener('submit', (event) => {
-      event.preventDefault();
-
-      const formData = new FormData(event.target);
-      const rssUrl = formData.get('add-rss');
-
-      watchedState.processStateError = null;
-      watchedState.processState = processStates.initial;
-      watchedState.form.valid = true;
-      watchedState.form.processStateError = null;
-      watchedState.form.processState = processStates.sending;
-
-      validation(rssUrl, watchedState.rssUrls)
-        .then(() => {
-          postRss(rssUrl, watchedState);
-        }).catch((e) => {
-          watchedState.form.valid = false;
-          watchedState.form.processStateError = e.message;
-          watchedState.form.processState = processStates.failed;
-        });
-    });
-
-    listenToNewPosts(watchedState);
-  });
 };
