@@ -150,8 +150,6 @@ export default () => {
 
             state.feeds.unshift(feed);
             state.posts.unshift(...postsList);
-
-
             state.loadingProcess.error = null;
             state.loadingProcess.status = 'success';
           })
