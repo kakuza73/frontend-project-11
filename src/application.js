@@ -50,8 +50,7 @@ const loadFeed = (url, state) => {
 
 const updateFeeds = (state) => {
   const promises = state.feeds.map(({ url, id }) =>
-    axios.get(`https://allorigins.hexlet.app/get?disableCache=true&url=${url}`)
-      .then((response) => {
+    axios.get(`https://allorigins.hexlet.app/get?disableCache=true&url=${url}`).then((response) => {
         const currentPosts = state.posts.filter(({ feedId }) => feedId === id);
         const loadedPosts = parse(response.data.contents).posts.map((post) => ({
           ...post,
@@ -65,7 +64,7 @@ const updateFeeds = (state) => {
 
         state.posts.unshift(...newPosts);
       }));
-      
+
   Promise.all(promises).finally(() => {
     setTimeout(() => updateFeeds(state), 5000);
   });
