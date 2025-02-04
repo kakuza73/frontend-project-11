@@ -1,0 +1,17 @@
+name: linting
+on:
+  - push
+  - pull_request
+jobs:
+  linting:
+    name: run eslint
+    runs-on: ubuntu-latest
+    steps:
+        # Клонируем репозиторий
+        - uses: actions/checkout@v4
+        # Устанавливаем Node.js
+        - uses: actions/setup-node@v4
+        # Ставим зависимости
+        - run: make install
+        # Запускаем линтер
+        - run: make lint

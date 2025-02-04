@@ -4,16 +4,11 @@ install:
 lint:
 	npx eslint .
 
-fix:
-	npx eslint --fix .
-
-develop:
-	npx webpack serve
+start:
+	npx webpack serve --open
 
 build:
+	rm -rf dist
 	NODE_ENV=production npx webpack
-
-test:
-	npm test
 
 .PHONY: test

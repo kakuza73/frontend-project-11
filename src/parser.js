@@ -1,34 +1,23 @@
-/* eslint-disable no-undef */
-const getProxy = (url) => {
-	const proxy = new URL('get', 'https://allorigins.hexlet.app');
-	proxy.searchParams.set('url', url);
-	proxy.searchParams.set('disableCache', true);
-	return proxy.toString();
+export default (response) => {
+  const parser = new DOMParser();
+  const content = parser.parseFromString(response, 'text/xml');
+  const error = content.querySelector('parsererror');
+
+  if (error) {
+    const parserError = new Error(error.textContent);
+
+    parserError.name = 'parserError';
+
+    throw parserError;
+  }
+
+  return {
+    title: content.querySelector('title').textContent,
+    description: content.querySelector('description').textContent,
+    posts: [...content.querySelectorAll('item')].map((post) => ({
+      title: post.querySelector('title').textContent,
+      description: post.querySelector('description').textContent,
+      link: post.querySelector('link').textContent,
+    })),
+  };
 };
-
-const parseRss = (xmlString) => {
-	const parser = new DOMParser();
-	const xmlDoc = parser.parseFromString(xmlString, 'application/xml');
-
-	const errorNode = xmlDoc.querySelector('parsererror');
-	if (errorNode) {
-		throw new Error('feedback.parseError');
-	}
-	const feedTitle = xmlDoc.querySelector('channel > title').textContent;
-	const feedDescription = xmlDoc.querySelector('channel > description').textContent;
-	const feed = {
-		title: feedTitle,
-		description: feedDescription,
-	};
-	const items = Array.from(xmlDoc.querySelectorAll('item')).map((item) => {
-		const title = item.querySelector('title').textContent;
-		const link = item.querySelector('link').textContent;
-		const description = item.querySelector('description').textContent;
-		return { title, link, description };
-	});
-
-	return { feed, posts: items };
-};
-
-
-export default { getProxy, parseRss };
