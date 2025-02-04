@@ -51,19 +51,19 @@ const loadFeed = (url, state) => {
 const updateFeeds = (state) => {
   const promises = state.feeds.map(({ url, id }) =>
     axios.get(`https://allorigins.hexlet.app/get?disableCache=true&url=${url}`).then((response) => {
-        const currentPosts = state.posts.filter(({ feedId }) => feedId === id);
-        const loadedPosts = parse(response.data.contents).posts.map((post) => ({
-          ...post,
-          feedId: id,
-        }));
-        const newPosts = differenceWith(
-          loadedPosts,
-          currentPosts,
-          (loadedPost, currentPost) => loadedPost.title === currentPost.title,
-        ).map((post) => ({ ...post, id: uniqueId() }));
-
-        state.posts.unshift(...newPosts);
+      const currentPosts = state.posts.filter(({ feedId }) => feedId === id);
+      const loadedPosts = parse(response.data.contents).posts.map((post) => ({
+        ...post,
+        feedId: id,
       }));
+      const newPosts = differenceWith(
+        loadedPosts,
+        currentPosts,
+        (loadedPost, currentPost) => loadedPost.title === currentPost.title,
+      ).map((post) => ({ ...post, id: uniqueId() }));
+
+      state.posts.unshift(...newPosts);
+    }));
 
   Promise.all(promises).finally(() => {
     setTimeout(() => updateFeeds(state), 5000);
@@ -76,10 +76,10 @@ export default () => {
     posts: [],
     loadingProcess: {
       status: 'idle',
-      error: null,
+      error: '',
     },
     form: {
-      error: null,
+      error: '',
       valid: false,
     },
     modal: {
