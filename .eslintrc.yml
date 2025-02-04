@@ -1,14 +1,17 @@
 ---
 root: true
 
-
 env:
-  node: true
   browser: true
+  node: true
 
 extends:
-  - 'airbnb-base'
+  - "airbnb-base"
 
-rules:
+parserOptions:
+  ecmaVersion: latest
+  sourceType: module
+
+rules: 
   no-console: 0
   import/extensions: 0

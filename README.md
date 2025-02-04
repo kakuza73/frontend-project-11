@@ -1,23 +1,13 @@
 ### Hexlet tests and linter status:
 [![Actions Status](https://github.com/kakuza73/frontend-project-11/actions/workflows/hexlet-check.yml/badge.svg)](https://github.com/kakuza73/frontend-project-11/actions)
-[![ESlint](https://github.com/kakuza73/frontend-project-11/actions/workflows/actions.yml/badge.svg?branch=main)](https://github.com/kakuza73/frontend-project-11/actions/workflows/actions.yml)
+
+[![Action Workflow](https://github.com/kakuza73/frontend-project-11/actions/workflows/lint.yml/badge.svg)](https://github.com/kakuza73/frontend-project-11/actions/workflows/lint.yml/badge.svg)
+
 [![Maintainability](https://api.codeclimate.com/v1/badges/2cc4ffa58109a5e178f5/maintainability)](https://codeclimate.com/github/kakuza73/frontend-project-11/maintainability)
-**RSS Aggregator**
 
-[Exapmle on Vercel (In process)]()
 
-This is the web application for aggregating RSS feeds, with which it is convenient to read various sources, such as blogs.
+[example on Vercel](https://frontend-project-11-delta-olive.vercel.app/)
 
-## Installation:
-```
-make install
-npm link
-```
-## Minimum requirements:
-```
-Node: 17.9.1
-```
-## Run:
-```
-make start
-```
+### RSS Agrigator
+
+This is the web application which can help you with several posts of RSS feeds.
