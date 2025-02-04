@@ -64,9 +64,8 @@ const updateFeeds = (state) => {
         ).map((post) => ({ ...post, id: uniqueId() }));
 
         state.posts.unshift(...newPosts);
-      })
-  );
-
+      }));
+      
   Promise.all(promises).finally(() => {
     setTimeout(() => updateFeeds(state), 5000);
   });
