@@ -15,7 +15,7 @@ npm link
 ```
 ## Minimum requirements:
 ```
-Node: 17.9.1
+Node: 10.13.0
 ```
 ## Run:
 ```

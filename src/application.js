@@ -1,4 +1,4 @@
-/* eslint-disable no-param-reassign  */
+/* eslint-disable no-param-reassign */
 
 import axios from 'axios';
 import i18next from 'i18next';
@@ -12,57 +12,64 @@ import resources from './locales/index.js';
 
 const validate = (currentURL, previousURLs) => {
   const schema = string().url().required().notOneOf(previousURLs);
-  return schema.validate(currentURL);
+  return schema
+    .validate(currentURL)
+    .then(() => null)
+    .catch((error) => error.message);
+};
+
+const loadFeed = (url, state) => {
+  state.loadingProcess.status = 'loading';
+  return axios
+    .get(`https://allorigins.hexlet.app/get?disableCache=true&url=${url}`)
+    .then((response) => {
+      const { title, description, posts } = parse(response.data.contents);
+      const feed = {
+        id: uniqueId(),
+        url,
+        title,
+        description,
+      };
+      const postsList = posts.map((post) => ({
+        ...post,
+        id: uniqueId(),
+        feedId: feed.id,
+      }));
+
+      state.feeds.unshift(feed);
+      state.posts.unshift(...postsList);
+      state.loadingProcess.status = 'success';
+      state.loadingProcess.error = null;
+    })
+    .catch((error) => {
+      const errorType = error.isAxiosError ? 'errNet' : 'parserError';
+      state.loadingProcess.status = 'failed';
+      state.loadingProcess.error = errorType;
+    });
 };
 
 const updateFeeds = (state) => {
-  const promise = state.feeds.map(({ url, id }) => axios
-    .get(`https://allorigins.hexlet.app/get?disableCache=true&url=${url}`)
-    .then((response) => {
-      const currentPosts = state.posts.filter(({ feedId }) => feedId === id);
-      const loadedPosts = parse(response.data.contents).posts.map((post) => ({
-        ...post,
-        feedId: id,
-      }));
-      const newPosts = differenceWith(
-        loadedPosts,
-        currentPosts,
-        (loadedPost, currentPost) => loadedPost.title === currentPost.title,
-      ).map((post) => ({ ...post, id: uniqueId() }));
+  const promises = state.feeds.map(({ url, id }) =>
+    axios.get(`https://allorigins.hexlet.app/get?disableCache=true&url=${url}`)
+      .then((response) => {
+        const currentPosts = state.posts.filter(({ feedId }) => feedId === id);
+        const loadedPosts = parse(response.data.contents).posts.map((post) => ({
+          ...post,
+          feedId: id,
+        }));
+        const newPosts = differenceWith(
+          loadedPosts,
+          currentPosts,
+          (loadedPost, currentPost) => loadedPost.title === currentPost.title,
+        ).map((post) => ({ ...post, id: uniqueId() }));
 
-      state.posts.unshift(...newPosts);
-    }));
+        state.posts.unshift(...newPosts);
+      })
+  );
 
-  Promise.all(promise).finally(() => {
+  Promise.all(promises).finally(() => {
     setTimeout(() => updateFeeds(state), 5000);
   });
-};
-
-const errorState = (error, state) => {
-  switch (error.name) {
-    case 'ValidationError':
-      state.form = { ...state.form, valid: false, error: error.message };
-
-      break;
-
-    case 'parserError':
-      state.loadingProcess.error = 'noRSS';
-      state.loadingProcess.status = 'failed';
-
-      break;
-
-    case 'AxiosError':
-      state.loadingProcess.error = 'errNet';
-      state.loadingProcess.status = 'failed';
-
-      break;
-
-    default:
-      state.loadingProcess.error = 'unknown';
-      state.loadingProcess.status = 'failed';
-
-      break;
-  }
 };
 
 export default () => {
@@ -114,10 +121,7 @@ export default () => {
         },
       });
 
-      const state = onChange(
-        initialState,
-        render(elements, initialState, local),
-      );
+      const state = onChange(initialState, render(elements, initialState, local));
 
       elements.form.addEventListener('submit', (event) => {
         event.preventDefault();
@@ -126,35 +130,14 @@ export default () => {
         const previousURLs = state.feeds.map(({ url }) => url);
 
         validate(currentURL, previousURLs)
-          .then(() => {
-            state.form = { ...state.form, valid: true, error: null };
-            state.loadingProcess.status = 'loading';
+          .then((error) => {
+            if (error) {
+              state.form = { valid: false, error };
+              return;
+            }
 
-            return axios.get(
-              `https://allorigins.hexlet.app/get?disableCache=true&url=${currentURL}`,
-            );
-          })
-          .then((response) => {
-            const { title, description, posts } = parse(response.data.contents);
-            const feed = {
-              id: uniqueId(),
-              url: currentURL,
-              title,
-              description,
-            };
-            const postsList = posts.map((post) => ({
-              ...post,
-              id: uniqueId(),
-              feedId: feed.id,
-            }));
-
-            state.feeds.unshift(feed);
-            state.posts.unshift(...postsList);
-            state.loadingProcess.error = null;
-            state.loadingProcess.status = 'success';
-          })
-          .catch((error) => {
-            errorState(error, state);
+            state.form = { valid: true, error: null };
+            loadFeed(currentURL, state);
           });
       });
 
@@ -164,9 +147,7 @@ export default () => {
         }
 
         const { id } = target.dataset;
-
         state.modal.postId = id;
-
         state.ui.seenPosts.add(id);
       });
 
