@@ -5,7 +5,7 @@ const renderErrorss = (elements, i18n, value) => {
 
   const { feedback } = elements;
 
-  if(value === null) {
+  if (value === null) {
     return;
   }
 
@@ -22,15 +22,15 @@ const renderErrorss = (elements, i18n, value) => {
       feedback.textContent = t(value);
       break;
 
-      default:
-        break;
+    default:
+      break;
   }
 };
 
 export default (elements, i18n, state) => {
   //const { form, fields, errorFields } = elements;
   const formProcess = onChange(state, (path, value) => {
-  switch (path) {
+    switch (path) {
       case 'form.errors':
         renderErrorss(elements, i18n, value);
         break;

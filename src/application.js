@@ -42,17 +42,17 @@ export default async () => {
     debug: true,
     resources,
   })
-  .then(() => {
-    yup.setLocale({
-      mixed: {
-        required: () => ({ key: 'feedback.notEmpty' }),
-        conflict: () => ({ key: 'feedback.conflict' }),
-      },
-      string: {
-        url: () => ({ key: 'feedback.invalidUrl' }),
-      },
-    });
-  })
+    .then(() => {
+      yup.setLocale({
+        mixed: {
+          required: () => ({ key: 'feedback.notEmpty' }),
+          conflict: () => ({ key: 'feedback.conflict' }),
+        },
+        string: {
+          url: () => ({ key: 'feedback.invalidUrl' }),
+        },
+      });
+    })
   /*.then(() => {
     const urlSchema = (addUrl) => yup.object({
         urlRss: yup.string()
@@ -61,32 +61,32 @@ export default async () => {
             .notOneOf(addUrl, 'feedback.conflict'),
     });*/
 
-/*const urlSchema = (addUrl) => yup.object({
-    urlRss: yup.string()
-    .url()
-    .required()
-    .notOneOf(addUrl),
-  });*/
+  /*const urlSchema = (addUrl) => yup.object({
+      urlRss: yup.string()
+      .url()
+      .required()
+      .notOneOf(addUrl),
+    });*/
 
 
 
 
   const watchedState = watcher(elements, i18n, state); // Наблюдаемое состояние
 
-    elements.form.addEventListener('submit', (event) => {
-      event.preventDefault();
-      watchedState.form.status = 'loading';
-      watchedState.form.errors = null;
+  elements.form.addEventListener('submit', (event) => {
+    event.preventDefault();
+    watchedState.form.status = 'loading';
+    watchedState.form.errors = null;
 
-      const formData = new FormData(event.target);
-      const url = formData.get('url'); //получаем значение поля формы 'url'.
+    const formData = new FormData(event.target);
+    const url = formData.get('url'); //получаем значение поля формы 'url'.
 
-      validate(url, watchedState.links)
+    validate(url, watchedState.links)
       .then((validUrl) => {
         const rss = axios.get(getProxy(validUrl));
         return rss;
       })
 
-});
+  });
 
 };
