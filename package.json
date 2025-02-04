@@ -1,7 +1,7 @@
 {
   "name": "@hexlet/code",
   "version": "1.0.0",
-  "description": "[![Actions Status](https://github.com/Ingsip/frontend-project-11/actions/workflows/hexlet-check.yml/badge.svg)](https://github.com/Ingsip/frontend-project-11/actions)",
+  "description": "[![Actions Status](https://github.com/kakuza73/frontend-project-11/actions/workflows/hexlet-check.yml/badge.svg)](https://github.com/kakuza73/frontend-project-11/actions)",
   "main": "index.js",
   "scripts": {
     "start": "webpack serve --mode development",
