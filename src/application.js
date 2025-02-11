@@ -45,13 +45,16 @@ export default () => {
         .catch(() => null));
 
       Promise.all(promises).then((items) => {
-        items.forEach((response, index) => {
+        items.forEach((response) => {
           if (!response) return;
           const { latestPost } = parse(response);
           const statePosts = state.rss.posts;
           if (!differenceBy(statePosts, [latestPost], 'title').length) {
-            latestPost.id = uniqueId();
-            state.rss.posts = [latestPost, ...state.rss.posts];
+            const newPost = {
+              ...latestPost,
+              id: uniqueId()
+            };
+            state.rss.posts = [newPost, ...state.rss.posts];
             watchedState.loadingProcess.status = 'success';
           }
         });
@@ -69,9 +72,12 @@ export default () => {
             watchedState.form = { error: 'errorRSS', valid: false };
             return;
           }
-          parsedData.posts.forEach((post) => { post.id = uniqueId(); });
+          const postsWithIds = parsedData.posts.map((post) => ({
+            ...post,
+            id: uniqueId()
+          }));
           state.rss.feeds = [...state.rss.feeds, { url, ...parsedData.feed }];
-          state.rss.posts = [...parsedData.posts, ...state.rss.posts];
+          state.rss.posts = [...postsWithIds, ...state.rss.posts];
           watchedState.loadingProcess.status = 'success';
           watchedState.form = { error: null, valid: true };
         })
