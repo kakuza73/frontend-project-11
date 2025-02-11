@@ -16,6 +16,7 @@ export default () => {
     buttonSubmit: document.querySelector('button[type="submit"]'),
     modal: document.getElementById('modal'),
     rssPosts: document.querySelector('.posts'),
+    feedback: document.querySelector('.feedback'), // Add feedback element
   };
 
   const state = {
@@ -55,7 +56,6 @@ export default () => {
               id: uniqueId(),
             };
             state.rss.posts = [newPost, ...state.rss.posts];
-            watchedState.loadingProcess.status = 'success';
           }
         });
         watchedState.loadingProcess.status = 'idle';
@@ -64,44 +64,61 @@ export default () => {
 
     const requestRSS = (url) => {
       watchedState.loadingProcess.status = 'loading';
-      axios.get(`https://allorigins.hexlet.app/get?disableCache=true&url=${url}`)
+      watchedState.form.valid = false;
+
+      return axios.get(`https://allorigins.hexlet.app/get?disableCache=true&url=${url}`)
         .then((response) => {
           const parsedData = parse(response);
           if (!parsedData) {
-            watchedState.loadingProcess.status = 'fail';
-            watchedState.form = { error: 'errorRSS', valid: false };
-            return;
+            throw new Error('RSS parsing error');
           }
+
           const postsWithIds = parsedData.posts.map((post) => ({
             ...post,
             id: uniqueId(),
           }));
+
           state.rss.feeds = [...state.rss.feeds, { url, ...parsedData.feed }];
           state.rss.posts = [...postsWithIds, ...state.rss.posts];
+
           watchedState.loadingProcess.status = 'success';
           watchedState.form = { error: null, valid: true };
+
+          elements.input.value = '';
+          elements.input.focus();
         })
-        .catch(() => {
+        .catch((error) => {
           watchedState.loadingProcess.status = 'fail';
-          watchedState.form = { error: 'netError', valid: false };
+          watchedState.form = {
+            error: error.message === 'RSS parsing error' ? 'errorRSS' : 'netError',
+            valid: false
+          };
+          throw error;
         });
     };
 
     elements.form.addEventListener('submit', (e) => {
       e.preventDefault();
       const formData = new FormData(e.target);
+      const url = formData.get('url');
+
       const schema = object({
         url: string().url().notOneOf(state.rss.feeds.map((feed) => feed.url)),
       });
-      schema.validate(Object.fromEntries(formData))
-        .then((item) => requestRSS(item.url))
+
+      schema.validate({ url })
+        .then(() => requestRSS(url))
         .catch((err) => {
-          watchedState.form = { error: err.type, valid: false };
+          watchedState.form = {
+            error: err.name === 'ValidationError' ? err.type : err.message,
+            valid: false
+          };
         });
     });
 
     elements.input.addEventListener('input', () => {
       watchedState.loadingProcess.status = 'idle';
+      watchedState.form = { error: null, valid: false };
     });
 
     elements.rssPosts.addEventListener('click', (e) => {
@@ -119,5 +136,5 @@ export default () => {
     debug: false,
     resources,
   }).then(() => controller(local))
-    .catch(() => { });
+    .catch((err) => console.error('i18next initialization error:', err));
 };
