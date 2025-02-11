@@ -36,8 +36,6 @@ export default () => {
     },
   };
 
-
-
   const controller = (i18n) => {
     const { watchedState } = watch(elements, i18n, state);
 
