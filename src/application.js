@@ -1,3 +1,5 @@
+import './styles.scss';
+import 'bootstrap/dist/js/bootstrap.min.js';
 import { uniqueId, differenceBy } from 'lodash';
 import { object, string } from 'yup';
 import i18next from 'i18next';
