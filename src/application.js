@@ -40,49 +40,46 @@ export default () => {
     const { watchedState } = watch(elements, i18n, state);
 
     const checkRSSPosts = () => {
-      const promises = state.loadingProcess.urls.map((url) => axios.get(`https://allorigins.hexlet.app/get?disableCache=true&url=${url}`)
-        .then((response) => response)
-        .catch((err) => console.log(err)));
-      const promise = Promise.all(promises);
-      return promise
-        .then((items) => {
-          items.forEach((response) => {
-            const { latestPost } = parse(response);
-            const statePosts = state.rss.posts;
-            const diffPostsLength = differenceBy(statePosts, [latestPost], 'title').length;
-            if (diffPostsLength === statePosts.length) {
-              latestPost.id = uniqueId();
-              state.rss.posts = [latestPost, ...state.rss.posts];
-              watchedState.loadingProcess.state = 'processed';
-              watchedState.form = { error: null, valid: true };
-            }
-            watchedState.loadingProcess.state = 'pending';
-          });
-        })
-        .finally(() => setTimeout(checkRSSPosts, 5000));
+      const promises = state.rss.feeds.map((feed) => 
+        axios.get(`https://allorigins.hexlet.app/get?disableCache=true&url=${feed.url}`)
+          .then((response) => response)
+          .catch(() => null)
+      );
+      
+      Promise.all(promises).then((items) => {
+        items.forEach((response, index) => {
+          if (!response) return;
+          const { latestPost } = parse(response);
+          const statePosts = state.rss.posts;
+          if (!differenceBy(statePosts, [latestPost], 'title').length) {
+            latestPost.id = uniqueId();
+            state.rss.posts = [latestPost, ...state.rss.posts];
+            watchedState.loadingProcess.status = 'success';
+          }
+        });
+        watchedState.loadingProcess.status = 'idle';
+      }).finally(() => setTimeout(checkRSSPosts, 5000));
     };
 
     const requestRSS = (url) => {
+      watchedState.loadingProcess.status = 'loading';
       axios.get(`https://allorigins.hexlet.app/get?disableCache=true&url=${url}`)
         .then((response) => {
           const parsedData = parse(response);
           if (!parsedData) {
+            watchedState.loadingProcess.status = 'fail';
             watchedState.form = { error: 'errorRSS', valid: false };
-          } else {
-            parsedData.posts.forEach((post) => {
-              post.id = uniqueId(); // eslint-disable-line
-            });
-            state.rss.feeds = [...state.rss.feeds, parsedData.feed];
-            state.rss.posts = [...parsedData.posts, ...state.rss.posts];
-            state.loadingProcess.urls = [...state.loadingProcess.urls, url];
-            watchedState.loadingProcess.state = 'processed';
-            watchedState.form = { error: null, valid: true };
+            return;
           }
+          parsedData.posts.forEach((post) => { post.id = uniqueId(); });
+          state.rss.feeds = [...state.rss.feeds, { url, ...parsedData.feed }];
+          state.rss.posts = [...parsedData.posts, ...state.rss.posts];
+          watchedState.loadingProcess.status = 'success';
+          watchedState.form = { error: null, valid: true };
         })
-        .catch((err) => {
-          if (err) {
-            watchedState.form = { error: 'netError', valid: false };
-          }
+        .catch(() => {
+          watchedState.loadingProcess.status = 'fail';
+          watchedState.form = { error: 'netError', valid: false };
         });
     };
 
@@ -90,27 +87,22 @@ export default () => {
       e.preventDefault();
       const formData = new FormData(e.target);
       const schema = object({
-        url: string().url().notOneOf(state.loadingProcess.urls),
+        url: string().url().notOneOf(state.rss.feeds.map((feed) => feed.url)),
       });
       schema.validate(Object.fromEntries(formData))
-        .then((item) => {
-          watchedState.loadingProcess.state = 'requesting';
-          requestRSS(item.url);
-        })
+        .then((item) => requestRSS(item.url))
         .catch((err) => {
           watchedState.form = { error: err.type, valid: false };
         });
     });
 
     elements.input.addEventListener('input', () => {
-      watchedState.loadingProcess.state = 'pending';
+      watchedState.loadingProcess.status = 'idle';
     });
 
     elements.rssPosts.addEventListener('click', (e) => {
-      const typeElement = e.target.dataset.type;
-      if (typeElement) {
-        const currentElementID = e.target.dataset.id;
-        watchedState.ui.checkedPosts = [...state.ui.checkedPosts, currentElementID];
+      if (e.target.dataset.type) {
+        watchedState.ui.checkedPosts = [...state.ui.checkedPosts, e.target.dataset.id];
       }
     });
 
@@ -122,7 +114,6 @@ export default () => {
     lng: 'ru',
     debug: false,
     resources,
-  })
-    .then(() => controller(local))
-    .catch((err) => console.log(err));
+  }).then(() => controller(local))
+    .catch(() => {});
 };
