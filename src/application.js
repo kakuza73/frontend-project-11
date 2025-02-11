@@ -91,7 +91,7 @@ export default () => {
           watchedState.loadingProcess.status = 'fail';
           watchedState.form = {
             error: error.message === 'RSS parsing error' ? 'errorRSS' : 'netError',
-            valid: false
+            valid: false,
           };
           throw error;
         });
@@ -111,7 +111,7 @@ export default () => {
         .catch((err) => {
           watchedState.form = {
             error: err.name === 'ValidationError' ? err.type : err.message,
-            valid: false
+            valid: false,
           };
         });
     });
