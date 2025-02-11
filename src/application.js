@@ -52,7 +52,7 @@ export default () => {
           if (!differenceBy(statePosts, [latestPost], 'title').length) {
             const newPost = {
               ...latestPost,
-              id: uniqueId()
+              id: uniqueId(),
             };
             state.rss.posts = [newPost, ...state.rss.posts];
             watchedState.loadingProcess.status = 'success';
@@ -74,7 +74,7 @@ export default () => {
           }
           const postsWithIds = parsedData.posts.map((post) => ({
             ...post,
-            id: uniqueId()
+            id: uniqueId(),
           }));
           state.rss.feeds = [...state.rss.feeds, { url, ...parsedData.feed }];
           state.rss.posts = [...postsWithIds, ...state.rss.posts];
