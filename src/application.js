@@ -40,12 +40,10 @@ export default () => {
     const { watchedState } = watch(elements, i18n, state);
 
     const checkRSSPosts = () => {
-      const promises = state.rss.feeds.map((feed) => 
-        axios.get(`https://allorigins.hexlet.app/get?disableCache=true&url=${feed.url}`)
-          .then((response) => response)
-          .catch(() => null)
-      );
-      
+      const promises = state.rss.feeds.map((feed) => axios.get(`https://allorigins.hexlet.app/get?disableCache=true&url=${feed.url}`)
+        .then((response) => response)
+        .catch(() => null));
+
       Promise.all(promises).then((items) => {
         items.forEach((response, index) => {
           if (!response) return;
@@ -115,5 +113,5 @@ export default () => {
     debug: false,
     resources,
   }).then(() => controller(local))
-    .catch(() => {});
+    .catch(() => { });
 };
