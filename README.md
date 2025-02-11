@@ -6,8 +6,31 @@
 [![Maintainability](https://api.codeclimate.com/v1/badges/2cc4ffa58109a5e178f5/maintainability)](https://codeclimate.com/github/kakuza73/frontend-project-11/maintainability)
 
 
-[example on Vercel](https://frontend-project-11-delta-olive.vercel.app/)
+[Example on Vercel](https://frontend-project-11-delta-olive.vercel.app/)
 
 ### RSS Agrigator
 
-This is the web application which can help you with several posts of RSS feeds.
+The service for aggregating RSS feeds, which makes it convenient to read various sources, such as blogs.
+
+#### Installation
+
+You should have Node.js installed before proceeding.
+
+```
+$ git clone https://github.com/KindProgrammer/frontend-project-11.git
+$ cd frontend-project-11/
+$ make install
+```
+
+#### Launch
+
+```
+$ make develop
+```
+
+#### How to use
+
+1. Go to the application website
+2. Enter the RSS source link
+3. press the button 'add'
+4. Enjoy

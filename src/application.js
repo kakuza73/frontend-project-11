@@ -1,5 +1,3 @@
-import './styles.scss';
-import 'bootstrap/dist/js/bootstrap.min.js';
 import { uniqueId, differenceBy } from 'lodash';
 import { object, string } from 'yup';
 import i18next from 'i18next';
@@ -23,9 +21,9 @@ export default () => {
       error: null,
       valid: false,
     },
-    rssUrl: {
-      state: 'pending', // 'requesting', 'processed','changed', 'pending'
-      urls: [],
+    loadingProcess: {
+      status: 'idle',
+      error: null,
     },
     rss: {
       feeds: [],
@@ -36,11 +34,13 @@ export default () => {
     },
   };
 
+
+
   const controller = (i18n) => {
     const { watchedState } = watch(elements, i18n, state);
 
     const checkRSSPosts = () => {
-      const promises = state.rssUrl.urls.map((url) => axios.get(`https://allorigins.hexlet.app/get?disableCache=true&url=${url}`)
+      const promises = state.loadingProcess.urls.map((url) => axios.get(`https://allorigins.hexlet.app/get?disableCache=true&url=${url}`)
         .then((response) => response)
         .catch((err) => console.log(err)));
       const promise = Promise.all(promises);
@@ -53,10 +53,10 @@ export default () => {
             if (diffPostsLength === statePosts.length) {
               latestPost.id = uniqueId();
               state.rss.posts = [latestPost, ...state.rss.posts];
-              watchedState.rssUrl.state = 'processed';
+              watchedState.loadingProcess.state = 'processed';
               watchedState.form = { error: null, valid: true };
             }
-            watchedState.rssUrl.state = 'pending';
+            watchedState.loadingProcess.state = 'pending';
           });
         })
         .finally(() => setTimeout(checkRSSPosts, 5000));
@@ -74,8 +74,8 @@ export default () => {
             });
             state.rss.feeds = [...state.rss.feeds, parsedData.feed];
             state.rss.posts = [...parsedData.posts, ...state.rss.posts];
-            state.rssUrl.urls = [...state.rssUrl.urls, url];
-            watchedState.rssUrl.state = 'processed';
+            state.loadingProcess.urls = [...state.loadingProcess.urls, url];
+            watchedState.loadingProcess.state = 'processed';
             watchedState.form = { error: null, valid: true };
           }
         })
@@ -90,11 +90,11 @@ export default () => {
       e.preventDefault();
       const formData = new FormData(e.target);
       const schema = object({
-        url: string().url().notOneOf(state.rssUrl.urls),
+        url: string().url().notOneOf(state.loadingProcess.urls),
       });
       schema.validate(Object.fromEntries(formData))
         .then((item) => {
-          watchedState.rssUrl.state = 'requesting';
+          watchedState.loadingProcess.state = 'requesting';
           requestRSS(item.url);
         })
         .catch((err) => {
@@ -103,7 +103,7 @@ export default () => {
     });
 
     elements.input.addEventListener('input', () => {
-      watchedState.rssUrl.state = 'pending';
+      watchedState.loadingProcess.state = 'pending';
     });
 
     elements.rssPosts.addEventListener('click', (e) => {
